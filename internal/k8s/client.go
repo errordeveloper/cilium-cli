@@ -40,11 +40,11 @@ type Client struct {
 	Clientset       kubernetes.Interface
 	CiliumClientset ciliumClientset.Interface
 	Config          *rest.Config
-	RawConfig       clientcmdapi.Config
+	RawConfig       *clientcmdapi.Config
 	contextName     string
 }
 
-func NewClient(contextName, kubeconfig string) (*Client, error) {
+func NewConfig(contextName, kubeconfig string) (*rest.Config, *clientcmdapi.Config, error) {
 	rules := clientcmd.NewDefaultClientConfigLoadingRules()
 
 	if kubeconfig != "" {
@@ -55,14 +55,23 @@ func NewClient(contextName, kubeconfig string) (*Client, error) {
 
 	config, err := nonInteractiveClient.ClientConfig()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	rawConfig, err := nonInteractiveClient.RawConfig()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
+	return config, &rawConfig, nil
+}
+
+func NewClient(contextName, kubeconfig string) (*Client, error) {
+	config, rawConfig, err := NewConfig(contextName, kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+	
 	ciliumClientset, err := ciliumClientset.NewForConfig(config)
 	if err != nil {
 		return nil, err
